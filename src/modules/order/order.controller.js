@@ -6,6 +6,8 @@ import cartmodel from "../../../db/models/cart.model.js";
 import couponmodel from "../../../db/models/coupon.model.js";
 import { createInvoice } from "../../utils/pdf.js";
 import { sendEmail } from "../../service/sendEmail.js";
+import { payment } from "../../utils/payment.js";
+import Stripe from "stripe";
 
 //******************************************createorder**********************************/
 /*
@@ -95,41 +97,80 @@ export const createorder = asyncHnadler(async (req, res, next) => {
   if (flag) {
     await cartmodel.updateOne({ user: req.user._id }, { products: [] });
   }
-  const invoice = {
-    shipping: {
-      name: req.user.name,
-      address: req.user.email,
-      city: "Egypt",
-      state: "Cairo",
-      country: "EG",
-      postal_code: 94111,
-    },
-    items: order.products,
-    subtotal: subPrice,
-    paid: order.totalprice,
-    invoice_nr: order._id,
-    date: order.createdAt,
-    coupon: req.body?.coupon?.amount || 0,
-  };
+  // const invoice = {
+  //   shipping: {
+  //     name: req.user.name,
+  //     address: req.user.email,
+  //     city: "Egypt",
+  //     state: "Cairo",
+  //     country: "EG",
+  //     postal_code: 94111,
+  //   },
+  //   items: order.products,
+  //   subtotal: subPrice,
+  //   paid: order.totalprice,
+  //   invoice_nr: order._id,
+  //   date: order.createdAt,
+  //   coupon: req.body?.coupon?.amount || 0,
+  // };
 
-  await createInvoice(invoice, "invoice.pdf");
-  await sendEmail(
-    req.user.email,
-    "order placed",
-    ` Your order has been placed successfully`,
-    [
-      {
-        path: "invoice.pdf",
-        contentType: "application/pdf",
-      },
-      {
-        path: "logo2.jpg",
-        contentType: "image/jpg",
-      },
-    ]
-  );
+  // await createInvoice(invoice, "invoice.pdf");
+  // await sendEmail(
+  //   req.user.email,
+  //   "order placed",
+  //   ` Your order has been placed successfully`,
+  //   [
+  //     {
+  //       path: "invoice.pdf",
+  //       contentType: "application/pdf",
+  //     },
+  //     {
+  //       path: "logo2.jpg",
+  //       contentType: "image/jpg",
+  //     },
+  //   ]
+  // );
+ if(paymentMethod=="card"){
+   const stripe = new Stripe(process.env.stripe_secret)
+  if(req.body?.coupon){
+    const coupon =await stripe.coupons.create({
+      percent_off:req.body.coupon.amount,
+      duration:"once",
+    })
+    req.body.couponId=coupon.id
 
-  res.status(201).json({ msg: "done", order });
+  }
+   const session = await payment({
+      stripe,
+     payment_method_types: ["card"],
+     mode: "payment",
+     customer_email: req.user.email,
+     metadata: {
+       orderId: order._id.toString(),
+     },
+     success_url: `${req.protocol}://${req.headers.host}/orders/success/${order._id}`,
+
+     cancel_url: `${req.protocol}://${req.headers.host}/orders/cancel/${order._id}`,
+     line_items: order.products.map((product) => {
+       return {
+         price_data: {
+           currency: "egp",
+           product_data: {
+             name: product.title,
+           },
+           unit_amount: product.price * 100,
+         },
+         quantity: product.quantity,
+       }
+     }),
+     discounts:req.body?.coupon?[{coupon: req.body.couponId}]:[]
+    })
+   
+  res.status(201).json({ msg: "done", url: session.url });
+
+ }
+   res.status(201).json({ msg: "done", order});
+
 });
 
 export const cancelorder = asyncHnadler(async (req, res, next) => {
