@@ -8,6 +8,13 @@ import { deleteFromDatabase } from "./utils/deleteFromDatabase.js";
 import cors from "cors"
 export const initApp = (app, express) => {
   app.use(cors())
+  app.use((req,res,next)=>{
+    if(originalUrl=="/orders/webhook"){
+      next()
+    }else{
+      express.json()(req,res,next)
+    }
+  })
   app.use(express.json());
   app.get("/",(req,res)=>{
     res.status(200).json({msg:"hello from my project"})

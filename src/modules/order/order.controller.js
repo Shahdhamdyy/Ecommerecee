@@ -173,6 +173,35 @@ export const createorder = asyncHnadler(async (req, res, next) => {
 
 });
 
+//********************webhook*********** */
+export const webhook=asyncHnadler(async(req,res,next)=>{
+     const stripe = new Stripe(process.env.stripe_secret)
+    const sig = req.headers["stripe-signature"];
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.endpointSecret
+      );
+    } catch (error) {
+      res.status(400).send({ error: "Webhook signature is invalid" });
+      return;
+    }
+    //handle the event
+    if(event.type!==  'checkout.session.complete'){
+      const{orderId}=event.data.object.metadata
+      await ordermodel.findOneAndUpdate({_id:orderId},{status:"rejected"})
+      res.status(400).json({ msg: "fail" });
+    }
+      await ordermodel.findOneAndUpdate(
+        { _id: orderId },
+        { status: "placed" }
+      );
+      res.status(200).json({ msg: "done" });
+      
+})
+
 export const cancelorder = asyncHnadler(async (req, res, next) => {
   const { id } = req.params;
   const { reason } = req.body;

@@ -14,6 +14,14 @@ orderRouter.post(
 orderRouter.put(
   "/:id",
   validation(cv.cancelorder),
-  auth(["admin"]),bc.cancelorder
+  auth(["admin"]),
+  bc.cancelorder
 );
+
+
+  
+   
+    
+
+
 export default orderRouter;
