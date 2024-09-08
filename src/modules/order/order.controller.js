@@ -97,39 +97,39 @@ export const createorder = asyncHnadler(async (req, res, next) => {
   if (flag) {
     await cartmodel.updateOne({ user: req.user._id }, { products: [] });
   }
-  // const invoice = {
-  //   shipping: {
-  //     name: req.user.name,
-  //     address: req.user.email,
-  //     city: "Egypt",
-  //     state: "Cairo",
-  //     country: "EG",
-  //     postal_code: 94111,
-  //   },
-  //   items: order.products,
-  //   subtotal: subPrice,
-  //   paid: order.totalprice,
-  //   invoice_nr: order._id,
-  //   date: order.createdAt,
-  //   coupon: req.body?.coupon?.amount || 0,
-  // };
+  const invoice = {
+    shipping: {
+      name: req.user.name,
+      address: req.user.email,
+      city: "Egypt",
+      state: "Cairo",
+      country: "EG",
+      postal_code: 94111,
+    },
+    items: order.products,
+    subtotal: subPrice,
+    paid: order.totalprice,
+    invoice_nr: order._id,
+    date: order.createdAt,
+    coupon: req.body?.coupon?.amount || 0,
+  };
 
-  // await createInvoice(invoice, "invoice.pdf");
-  // await sendEmail(
-  //   req.user.email,
-  //   "order placed",
-  //   ` Your order has been placed successfully`,
-  //   [
-  //     {
-  //       path: "invoice.pdf",
-  //       contentType: "application/pdf",
-  //     },
-  //     {
-  //       path: "logo2.jpg",
-  //       contentType: "image/jpg",
-  //     },
-  //   ]
-  // );
+  await createInvoice(invoice, "invoice.pdf");
+  await sendEmail(
+    req.user.email,
+    "order placed",
+    ` Your order has been placed successfully`,
+    [
+      {
+        path: "invoice.pdf",
+        contentType: "application/pdf",
+      },
+      {
+        path: "logo2.jpg",
+        contentType: "image/jpg",
+      },
+    ]
+  );
  if(paymentMethod=="card"){
    const stripe = new Stripe(process.env.stripe_secret)
   if(req.body?.coupon){
